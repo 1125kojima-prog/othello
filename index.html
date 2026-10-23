@@ -107,11 +107,12 @@ function clack() {
       g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.connect(g).connect(out); o.start(t); o.stop(t + dur);
     };
-    tone('sine', 110, 42, 0.8, 0.12);                         // deep body, cut short so it does not ring
+    tone('sine', 75, 32, 1, 0.16);                            // deep body, cut short so it does not ring
+    tone('triangle', 130, 55, 0.35, 0.1);                     // upper harmonics so small speakers still carry the weight
     const n = audio.createBufferSource(), bp = audio.createBiquadFilter(), g = audio.createGain();
     n.buffer = audio.createBuffer(1, audio.sampleRate * 0.03, audio.sampleRate);
     n.buffer.getChannelData(0).forEach((_, i, d) => d[i] = (Math.random() * 2 - 1) * (1 - i / d.length));
-    bp.type = 'bandpass'; bp.frequency.value = 1200; g.gain.value = 0.5;
+    bp.type = 'bandpass'; bp.frequency.value = 600; g.gain.value = 0.6;
     n.connect(bp).connect(g).connect(out); n.start(t);          // marble tap
   } catch (e) { /* no audio support: stay silent */ }
 }
