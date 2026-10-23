@@ -94,7 +94,7 @@
 <script>
 const HINTS = 5;
 let audio, soundOn = true;
-// synthesized stone sound (no audio file): marble tap + deep body + faint bell ring.
+// synthesized stone sound (no audio file): marble tap + short deep body.
 // AudioContext is created on first move, which is a user gesture.
 function clack() {
   if (!soundOn) return;
@@ -107,8 +107,7 @@ function clack() {
       g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
       o.connect(g).connect(out); o.start(t); o.stop(t + dur);
     };
-    tone('sine', 110, 42, 0.8, 0.4);                          // deep body
-    [[330, 0.08], [495, 0.05], [825, 0.03]].forEach(([f, v]) => tone('sine', f, f * 0.995, v, 0.9)); // bell ring
+    tone('sine', 110, 42, 0.8, 0.12);                         // deep body, cut short so it does not ring
     const n = audio.createBufferSource(), bp = audio.createBiquadFilter(), g = audio.createGain();
     n.buffer = audio.createBuffer(1, audio.sampleRate * 0.03, audio.sampleRate);
     n.buffer.getChannelData(0).forEach((_, i, d) => d[i] = (Math.random() * 2 - 1) * (1 - i / d.length));
