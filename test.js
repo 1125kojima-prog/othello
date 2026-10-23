@@ -8,5 +8,5 @@ assert.strictEqual(n.filter(x => x === 1).length, 4);
 assert.strictEqual(n.filter(x => x === 2).length, 1);
 assert.strictEqual(play(b, 0, 1), null); // illegal move rejected
 assert.strictEqual(play(n, 19, 2), null); // occupied cell rejected
-assert.ok(legalMoves(b, 1).includes(cpuMove(b, 1))); // CPU picks a legal move
+for (const lv of [0, 1, 2, 3]) assert.ok(legalMoves(b, 1).includes(cpuMove(b, 1, lv))); // every level picks a legal move
 console.log('ok');

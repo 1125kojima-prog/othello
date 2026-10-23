@@ -5,59 +5,82 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>オセロ</title>
 <style>
-  :root { --bg: #ecf0f1; --ink: #2c3e50; --green: #27ae60; --line: #1e8449; --blue: #3498db; --red: #e74c3c; --yellow: #f1c40f; }
+  :root { --bg: #0b0b0d; --panel: #15151a; --ivory: #f3ead7; --gold: #c9a75a; --gold-hi: #e8d29a; --felt: #0e3b2c; --felt-hi: #14523d; --muted: #8d8676; }
   * { box-sizing: border-box; }
-  body { margin: 0; min-height: 100vh; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; background: var(--bg); color: var(--ink); text-align: center; padding: 16px; }
-  h1 { margin: 8px 0 16px; font-size: 2rem; }
-  .btn { display: block; width: min(80vw, 280px); margin: 12px auto; padding: 16px; border: 0; border-radius: 12px; color: #fff; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
-  .btn:focus-visible, .cell:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
-  .pvp { background: var(--blue); } .cpu { background: var(--red); } .sub { background: var(--ink); width: auto; display: inline-block; padding: 10px 20px; margin: 8px 4px; font-size: 1rem; }
-  #banner { width: min(92vw, 480px); margin: 0 auto 12px; padding: 12px; border-radius: 12px; font-size: 1.2rem; font-weight: 700; color: #fff; background: var(--ink); }
-  #banner.turn-me { background: var(--blue); } #banner.win { background: var(--yellow); color: var(--ink); } #banner.lose { background: var(--red); }
-  #score { display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; font-weight: 700; }
-  .chip { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-radius: 999px; background: #fff; border: 3px solid transparent; }
-  .chip.on { border-color: var(--blue); }
-  .dot { width: 18px; height: 18px; border-radius: 50%; } .b { background: #111; } .w { background: #fff; border: 2px solid #111; }
-  #board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 480px); margin: 0 auto 8px; background: var(--line); gap: 2px; padding: 2px; border-radius: 8px; }
-  .cell { aspect-ratio: 1; background: var(--green); border: 0; padding: 0; position: relative; cursor: pointer; }
+  body { margin: 0; min-height: 100vh; padding: 16px; text-align: center; color: var(--ivory);
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", Georgia, serif;
+    background: radial-gradient(ellipse at top, #1d1b16 0%, var(--bg) 60%) fixed; }
+  h1 { margin: 16px 0 4px; font-weight: 400; font-size: 2.2rem; letter-spacing: .5em; text-indent: .5em; color: var(--gold-hi); }
+  .rule { width: 120px; height: 1px; margin: 0 auto 24px; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+  p.lead { color: var(--muted); letter-spacing: .15em; }
+  .btn { display: block; width: min(84vw, 300px); margin: 14px auto; padding: 14px; background: transparent; color: var(--gold-hi);
+    border: 1px solid var(--gold); border-radius: 2px; font: inherit; font-size: 1.05rem; letter-spacing: .2em; cursor: pointer; transition: background .2s, color .2s; }
+  .btn:hover { background: var(--gold); color: var(--bg); }
+  .btn:focus-visible, .cell:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+  .btn.small { display: inline-block; width: auto; padding: 10px 22px; margin: 8px 6px; font-size: .9rem; }
+  .btn.lv small { display: block; margin-top: 4px; font-size: .7rem; letter-spacing: .1em; opacity: .7; }
+  #banner { width: min(92vw, 480px); margin: 0 auto 14px; padding: 14px; border: 1px solid var(--gold); border-radius: 2px; background: var(--panel);
+    font-size: 1.15rem; letter-spacing: .12em; min-height: 3.2rem; }
+  #banner.turn-me { color: var(--gold-hi); box-shadow: 0 0 18px rgba(201,167,90,.35); }
+  #banner.win { background: linear-gradient(135deg, #8a6d2b, var(--gold-hi), #8a6d2b); color: #1a1405; font-weight: 700; }
+  #banner.lose { color: var(--muted); }
+  #score { display: flex; justify-content: center; gap: 14px; margin-bottom: 14px; }
+  .chip { display: flex; align-items: center; gap: 10px; padding: 6px 18px; border: 1px solid #3a3526; border-radius: 2px; color: var(--muted); letter-spacing: .1em; }
+  .chip.on { border-color: var(--gold); color: var(--ivory); }
+  .dot { width: 16px; height: 16px; border-radius: 50%; }
+  .b { background: radial-gradient(circle at 35% 30%, #5a5a60, #050506 65%); }
+  .w { background: radial-gradient(circle at 35% 30%, #fff, #cfc6b0 80%); }
+  #board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 480px); margin: 0 auto 10px; padding: 8px;
+    background: #2a1d10; border: 1px solid var(--gold); box-shadow: 0 12px 40px rgba(0,0,0,.7); gap: 1px; }
+  .cell { aspect-ratio: 1; border: 0; padding: 0; position: relative; cursor: pointer; background: radial-gradient(circle at 50% 40%, var(--felt-hi), var(--felt)); }
   .cell:disabled { cursor: default; }
-  .cell.hint::after { content: ""; position: absolute; inset: 38%; border-radius: 50%; background: rgba(255,255,255,.55); }
-  .disc { position: absolute; inset: 10%; border-radius: 50%; }
-  .disc.b { background: #111; } .disc.w { background: #fff; }
+  .cell.hint::after { content: ""; position: absolute; inset: 41%; border-radius: 50%; background: var(--gold); opacity: .75; }
+  .disc { position: absolute; inset: 10%; border-radius: 50%; box-shadow: 0 3px 5px rgba(0,0,0,.6); }
   #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
 <h1>オセロ</h1>
+<div class="rule"></div>
 
 <section id="menu">
-  <p>モードを選んでください</p>
-  <button class="btn pvp" data-mode="pvp">👥 対人戦(2人で遊ぶ)</button>
-  <button class="btn cpu" data-mode="cpu">🤖 CPU戦(あなたが黒)</button>
+  <p class="lead">モードをお選びください</p>
+  <button class="btn" data-mode="pvp">対人戦</button>
+  <button class="btn" id="to-cpu">CPU戦</button>
+</section>
+
+<section id="levels" hidden>
+  <p class="lead">CPUの強さをお選びください</p>
+  <button class="btn lv" data-level="0">弱い<small>ほぼランダム</small></button>
+  <button class="btn lv" data-level="1">普通<small>多く取れる手を選ぶ</small></button>
+  <button class="btn lv" data-level="2">強い<small>先を読み、盤面の価値を見る</small></button>
+  <button class="btn lv" data-level="3">ガイキチ<small>深く読み、終盤は完全読み</small></button>
+  <button class="btn small" id="levels-back">戻る</button>
 </section>
 
 <section id="game" hidden>
   <div id="banner" role="status" aria-live="polite"></div>
   <div id="score"></div>
   <div id="board"></div>
-  <button class="btn sub" id="reset">もう一度</button>
-  <button class="btn sub" id="back">モード選択へ</button>
+  <button class="btn small" id="reset">もう一度</button>
+  <button class="btn small" id="back">モード選択へ</button>
 </section>
 <canvas id="confetti" aria-hidden="true"></canvas>
 
 <script src="game.js"></script>
 <script>
-let board, turn, mode, over, note, timer;
+let board, turn, mode, level, over, note, timer;
 const $ = id => document.getElementById(id);
 const NAME = { 1: '黒', 2: '白' };
+const LEVELS = ['弱い', '普通', '強い', 'ガイキチ'];
 const cpuTurn = () => mode === 'cpu' && turn === 2;
+const show = id => ['menu', 'levels', 'game'].forEach(s => $(s).hidden = s !== id);
 
-function start(m) {
-  if (m) mode = m;
+function start() {
   clearTimeout(timer);
   board = newBoard(); turn = 1; over = false; note = '';
-  $('menu').hidden = true; $('game').hidden = false;
+  show('game');
   render();
 }
 
@@ -74,16 +97,14 @@ function move(i) {
   turn = 3 - turn;
   if (!legalMoves(board, turn).length) {
     if (!legalMoves(board, mover).length) over = true;
-    else { note = `${who(turn)}は置ける場所がないのでパスしました。`; turn = mover; }
+    else { note = `${who(turn)}は置ける場所がないためパスしました。`; turn = mover; }
   }
   render();
   if (over) finish();
-  else if (cpuTurn()) timer = setTimeout(() => move(cpuMove(board, 2)), 700);
+  else if (cpuTurn()) timer = setTimeout(() => move(cpuMove(board, 2, level)), 700);
 }
 
-const who = p => mode === 'cpu' ? (p === 1 ? 'あなた' : 'CPU') : NAME[p];
-
-function count(p) { return board.filter(x => x === p).length; }
+const who = p => mode === 'cpu' ? (p === 1 ? 'あなた' : `CPU(${LEVELS[level]})`) : NAME[p];
 
 function render() {
   const moves = over || cpuTurn() ? [] : legalMoves(board, turn);
@@ -96,27 +117,26 @@ function render() {
     c.onclick = () => click(i);
     return c;
   }));
-  const k = count(1), w = count(2);
   $('score').innerHTML = [1, 2].map(p =>
-    `<div class="chip${!over && turn === p ? ' on' : ''}"><span class="dot ${p === 1 ? 'b' : 'w'}"></span>${who(p)} ${p === 1 ? k : w}</div>`).join('');
-  const b = $('banner');
+    `<div class="chip${!over && turn === p ? ' on' : ''}"><span class="dot ${p === 1 ? 'b' : 'w'}"></span>${who(p)} ${count(board, p)}</div>`).join('');
   if (over) return;
-  b.className = mode === 'cpu' && turn === 1 ? 'turn-me' : '';
-  b.textContent = note + (mode === 'cpu'
+  $('banner').className = mode === 'cpu' && turn === 1 ? 'turn-me' : '';
+  $('banner').textContent = note + (mode === 'cpu'
     ? (turn === 1 ? 'あなたの番です(黒)' : 'CPUが考え中…')
     : `${NAME[turn]}の番です`);
 }
 
 function finish() {
-  const k = count(1), w = count(2), b = $('banner');
+  const k = count(board, 1), w = count(board, 2), b = $('banner');
   const winner = k === w ? 0 : k > w ? 1 : 2;
-  const text = winner === 0 ? '引き分け!' : mode === 'cpu'
-    ? (winner === 1 ? '🎉 あなたの勝ち!' : '😢 CPUの勝ち…')
-    : `🎉 ${NAME[winner]}の勝ち!`;
+  const lost = mode === 'cpu' && winner === 2;
+  const text = winner === 0 ? '引き分けです' : mode === 'cpu'
+    ? (winner === 1 ? 'おめでとうございます、あなたの勝ちです' : 'CPUの勝ちです')
+    : `${NAME[winner]}の勝ちです`;
   b.textContent = `${text}(黒 ${k} - 白 ${w})`;
-  b.className = winner === 0 ? '' : (mode === 'cpu' && winner === 2 ? 'lose' : 'win');
+  b.className = winner === 0 ? '' : lost ? 'lose' : 'win';
   $('score').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-  if (winner && !(mode === 'cpu' && winner === 2)) confetti();
+  if (winner && !lost) confetti();
 }
 
 // small canvas confetti; skipped when the user prefers reduced motion
@@ -124,7 +144,7 @@ function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const cv = $('confetti'), ctx = cv.getContext('2d');
   cv.width = innerWidth; cv.height = innerHeight;
-  const colors = ['#e74c3c', '#f1c40f', '#3498db', '#27ae60', '#9b59b6'];
+  const colors = ['#c9a75a', '#e8d29a', '#f3ead7', '#14523d', '#8a6d2b'];
   const ps = Array.from({ length: 160 }, () => ({
     x: cv.width / 2, y: cv.height * 0.4,
     vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 14 - 4,
@@ -143,9 +163,12 @@ function confetti() {
   })(performance.now());
 }
 
-document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => start(b.dataset.mode));
-$('reset').onclick = () => start();
-$('back').onclick = () => { clearTimeout(timer); $('game').hidden = true; $('menu').hidden = false; };
+document.querySelector('[data-mode="pvp"]').onclick = () => { mode = 'pvp'; start(); };
+$('to-cpu').onclick = () => show('levels');
+document.querySelectorAll('[data-level]').forEach(b => b.onclick = () => { mode = 'cpu'; level = +b.dataset.level; start(); });
+$('levels-back').onclick = () => show('menu');
+$('reset').onclick = start;
+$('back').onclick = () => { clearTimeout(timer); show('menu'); };
 </script>
 </body>
 </html>
