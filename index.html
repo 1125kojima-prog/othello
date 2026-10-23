@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>オセロ</title>
+<style>
+  body { font-family: sans-serif; text-align: center; background: #f4f4f4; }
+  #board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(90vw, 480px); margin: 1rem auto; background: #1b6b35; gap: 2px; padding: 2px; }
+  .cell { aspect-ratio: 1; background: #2e8b57; border: 0; padding: 0; position: relative; cursor: pointer; }
+  .cell:disabled { cursor: default; }
+  .cell.hint::after { content: ""; position: absolute; inset: 40%; border-radius: 50%; background: rgba(255,255,255,.5); }
+  .disc { position: absolute; inset: 10%; border-radius: 50%; }
+  .b { background: #111; } .w { background: #fff; }
+</style>
+</head>
+<body>
+<h1>オセロ</h1>
+<div id="status" role="status"></div>
+<div id="board"></div>
+<button id="reset">もう一度</button>
+<script src="game.js"></script>
+<script>
+let board, turn;
+const NAME = { 1: '黒', 2: '白' };
+const el = document.getElementById('board');
+
+function reset() { board = newBoard(); turn = 1; render(); }
+
+function click(i) {
+  const n = play(board, i, turn);
+  if (!n) return;
+  board = n;
+  turn = 3 - turn;
+  if (!legalMoves(board, turn).length) turn = 3 - turn; // pass; if neither can move, game over below
+  render();
+}
+
+function render() {
+  const moves = legalMoves(board, turn);
+  el.replaceChildren(...board.map((v, i) => {
+    const c = document.createElement('button');
+    c.className = 'cell' + (moves.includes(i) ? ' hint' : '');
+    c.disabled = !moves.includes(i);
+    c.setAttribute('aria-label', `${'ABCDEFGH'[i & 7]}${(i >> 3) + 1}`);
+    if (v) c.innerHTML = `<span class="disc ${v === 1 ? 'b' : 'w'}"></span>`;
+    c.onclick = () => click(i);
+    return c;
+  }));
+  const k = board.filter(x => x === 1).length, w = board.filter(x => x === 2).length;
+  const score = `黒 ${k} - 白 ${w}`;
+  document.getElementById('status').textContent = moves.length
+    ? `${NAME[turn]}の番 (${score})`
+    : `終了: ${k === w ? '引き分け' : (k > w ? '黒' : '白') + 'の勝ち'} (${score})`;
+}
+
+document.getElementById('reset').onclick = reset;
+reset();
+</script>
+</body>
+</html>
