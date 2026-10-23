@@ -37,11 +37,20 @@
   .cell:disabled { cursor: default; }
   .cell.hint::after { content: ""; position: absolute; inset: 41%; border-radius: 50%; background: var(--gold); opacity: .75; }
   .disc { position: absolute; inset: 10%; border-radius: 50%; box-shadow: 0 3px 5px rgba(0,0,0,.6); }
-  #card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 22px 34px; white-space: nowrap; pointer-events: none;
-    background: var(--ivory); color: #2a1d10; border: 3px double var(--gold); box-shadow: 0 16px 40px rgba(0,0,0,.8);
-    font-size: 1.6rem; letter-spacing: .1em; animation: slide-in .7s cubic-bezier(.2,1.2,.4,1); }
+  #card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 20px 36px; white-space: nowrap; pointer-events: none;
+    background: rgba(20,20,26,.78); backdrop-filter: blur(10px); color: #fff; border: 3px double var(--gold); border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,.6); font: 700 1.5rem/1.2 system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; letter-spacing: .04em;
+    animation: slide-in .7s cubic-bezier(.2,1.2,.4,1); }
   @keyframes slide-in { from { transform: translate(-50%, -300%); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { #card { animation: none; } }
+  #ai { position: fixed; right: 12px; bottom: 12px; text-align: center; font-size: .8rem; color: var(--muted); }
+  #ai .btn { width: auto; margin: 0 0 4px; padding: 10px 14px; font-size: .85rem; letter-spacing: .05em; background: var(--panel); }
+  #ai .btn:hover:not(:disabled) { background: var(--gold); color: var(--bg); }
+  #ai .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .cell.rec { box-shadow: inset 0 0 0 3px var(--gold-hi); }
+  .cell.rec::after { inset: 30%; opacity: 1; animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { transform: scale(.6); } }
+  @media (prefers-reduced-motion: reduce) { .cell.rec::after { animation: none; } }
   #confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   [hidden] { display: none !important; }
 </style>
@@ -68,6 +77,7 @@
 <section id="game" hidden>
   <div id="banner" role="status" aria-live="polite"></div>
   <div id="score"></div>
+  <div id="ai" hidden><button class="btn" id="ai-btn">AI手助けモード</button><div id="ai-left"></div></div>
   <div id="stage"><div id="board"></div><div id="card" hidden>ドンマイ('ω')</div></div>
   <button class="btn small" id="reset">もう一度</button>
   <button class="btn small" id="back">モード選択へ</button>
@@ -76,7 +86,8 @@
 
 <script src="game.js"></script>
 <script>
-let board, turn, mode, level, over, note, timer;
+const HINTS = 5;
+let board, turn, mode, level, over, note, timer, hintLeft, hint;
 const $ = id => document.getElementById(id);
 const NAME = { 1: '黒', 2: '白' };
 const LEVELS = ['弱い', '普通', '強い', 'ガイキチ'];
@@ -85,7 +96,7 @@ const show = id => ['menu', 'levels', 'game'].forEach(s => $(s).hidden = s !== i
 
 function start() {
   clearTimeout(timer);
-  board = newBoard(); turn = 1; over = false; note = '';
+  board = newBoard(); turn = 1; over = false; note = ''; hintLeft = HINTS; hint = -1;
   $('card').hidden = true;
   show('game');
   render();
@@ -100,7 +111,7 @@ function move(i) {
   const n = play(board, i, turn);
   if (!n) return;
   const mover = turn;
-  board = n; note = '';
+  board = n; note = ''; hint = -1;
   turn = 3 - turn;
   if (!legalMoves(board, turn).length) {
     if (!legalMoves(board, mover).length) over = true;
@@ -117,7 +128,7 @@ function render() {
   const moves = over || cpuTurn() ? [] : legalMoves(board, turn);
   $('board').replaceChildren(...board.map((v, i) => {
     const c = document.createElement('button');
-    c.className = 'cell' + (moves.includes(i) ? ' hint' : '');
+    c.className = 'cell' + (moves.includes(i) ? ' hint' : '') + (i === hint ? ' rec' : '');
     c.disabled = !moves.includes(i);
     c.setAttribute('aria-label', `${'ABCDEFGH'[i & 7]}${(i >> 3) + 1}`);
     if (v) c.innerHTML = `<span class="disc ${v === 1 ? 'b' : 'w'}"></span>`;
@@ -126,6 +137,9 @@ function render() {
   }));
   $('score').innerHTML = [1, 2].map(p =>
     `<div class="chip${!over && turn === p ? ' on' : ''}"><span class="dot ${p === 1 ? 'b' : 'w'}"></span>${who(p)} ${count(board, p)}</div>`).join('');
+  $('ai').hidden = mode !== 'cpu';
+  $('ai-btn').disabled = over || cpuTurn() || !hintLeft;
+  $('ai-left').textContent = `残り ${hintLeft} / ${HINTS} 回`;
   if (over) return;
   $('banner').className = mode === 'cpu' && turn === 1 ? 'turn-me' : '';
   $('banner').textContent = note + (mode === 'cpu'
@@ -147,34 +161,46 @@ function finish() {
   else if (winner) confetti();
 }
 
-// small canvas confetti; skipped when the user prefers reduced motion
+// canvas confetti: three bursts, then a second wave; skipped when the user prefers reduced motion
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const cv = $('confetti'), ctx = cv.getContext('2d');
-  cv.width = innerWidth; cv.height = innerHeight;
-  const colors = ['#c9a75a', '#e8d29a', '#f3ead7', '#14523d', '#8a6d2b'];
-  const ps = Array.from({ length: 160 }, () => ({
-    x: cv.width / 2, y: cv.height * 0.4,
-    vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 14 - 4,
-    s: 6 + Math.random() * 6, r: Math.random() * 6, c: colors[Math.random() * 5 | 0],
-  }));
-  const end = performance.now() + 4000;
+  const cv = $('confetti'), ctx = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight;
+  const colors = ['#ff4d6d', '#ffd23f', '#3bceac', '#4cc9f0', '#c9a75a', '#f3ead7', '#b5179e', '#ff9f1c'];
+  const ps = [];
+  const burst = (x, y, n, angle) => {
+    for (let i = 0; i < n; i++) {
+      const a = angle + (Math.random() - 0.5) * 1.3, sp = 10 + Math.random() * 18;
+      ps.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, s: 6 + Math.random() * 9, r: Math.random() * 6,
+        vr: (Math.random() - 0.5) * 0.5, c: colors[Math.random() * colors.length | 0], round: Math.random() < 0.3 });
+    }
+  };
+  const wave = () => { burst(0, H, 260, -Math.PI / 3); burst(W, H, 260, -2 * Math.PI / 3); burst(W / 2, H * 0.45, 260, -Math.PI / 2); };
+  wave(); setTimeout(wave, 700);
+  const t0 = performance.now(), dur = 5500;
   (function frame(t) {
-    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalAlpha = Math.min(1, (t0 + dur - t) / 1000); // fade out over the last second
     ps.forEach(p => {
-      p.vy += 0.3; p.x += p.vx; p.y += p.vy; p.r += 0.2;
-      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
-      ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s / 2);
+      p.vx *= 0.99; p.vy = p.vy * 0.99 + 0.35; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
+      if (p.round) { ctx.beginPath(); ctx.arc(0, 0, p.s / 2, 0, 7); ctx.fill(); }
+      else ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s / 2);
       ctx.restore();
     });
-    if (t < end) requestAnimationFrame(frame); else ctx.clearRect(0, 0, cv.width, cv.height);
-  })(performance.now());
+    if (t < t0 + dur) requestAnimationFrame(frame); else ctx.clearRect(0, 0, W, H);
+  })(t0);
 }
 
 document.querySelector('[data-mode="pvp"]').onclick = () => { mode = 'pvp'; start(); };
 $('to-cpu').onclick = () => show('levels');
 document.querySelectorAll('[data-level]').forEach(b => b.onclick = () => { mode = 'cpu'; level = +b.dataset.level; start(); });
 $('levels-back').onclick = () => show('menu');
+$('ai-btn').onclick = () => {
+  if (!hintLeft || over || cpuTurn()) return;
+  hintLeft--;
+  hint = cpuMove(board, 1, 3); // recommend with the strongest CPU
+  render();
+};
 $('reset').onclick = start;
 $('back').onclick = () => { clearTimeout(timer); show('menu'); };
 </script>
