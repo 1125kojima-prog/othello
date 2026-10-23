@@ -37,4 +37,10 @@ function play(b, i, p) {
   return n;
 }
 
-if (typeof module !== 'undefined') module.exports = { newBoard, flips, legalMoves, play };
+// CPU: greedy (most flips), corners strongly preferred, random tie-break
+function cpuMove(b, p) {
+  const score = i => flips(b, i, p).length + ([0, 7, 56, 63].includes(i) ? 100 : 0) + Math.random();
+  return legalMoves(b, p).sort((a, c) => score(c) - score(a))[0];
+}
+
+if (typeof module !== 'undefined') module.exports = { newBoard, flips, legalMoves, play, cpuMove };
