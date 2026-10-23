@@ -20,7 +20,7 @@
   .btn.small { display: inline-block; width: auto; padding: 10px 22px; margin: 8px 6px; font-size: .9rem; }
   .btn.lv small { display: block; margin-top: 4px; font-size: .7rem; letter-spacing: .1em; opacity: .7; }
   #banner { width: min(92vw, 480px); margin: 0 auto 14px; padding: 14px; border: 1px solid var(--gold); border-radius: 2px; background: var(--panel);
-    font-size: 1.15rem; letter-spacing: .12em; min-height: 3.2rem; }
+    font-size: 1.15rem; letter-spacing: .12em; min-height: 3.2rem; white-space: pre-line; }
   #banner.turn-me { color: var(--gold-hi); box-shadow: 0 0 18px rgba(201,167,90,.35); }
   #banner.win { background: linear-gradient(135deg, #8a6d2b, var(--gold-hi), #8a6d2b); color: #1a1405; font-weight: 700; }
   #banner.lose { color: var(--muted); }
@@ -152,16 +152,19 @@ function finish() {
   const winner = k === w ? 0 : k > w ? 1 : 2;
   const lost = mode === 'cpu' && winner === 2;
   const text = winner === 0 ? '引き分けです' : mode === 'cpu'
-    ? (winner === 1 ? 'おめでとうございます、あなたの勝ちです' : 'CPUの勝ちです')
+    ? (winner === 1 ? 'あなたの勝ちです' : 'CPUの勝ちです')
     : `${NAME[winner]}の勝ちです`;
-  b.textContent = `${text}(黒 ${k} - 白 ${w})`;
+  b.textContent = `${lost || !winner ? '' : 'おめでとうございます!\n'}${text}(黒 ${k} - 白 ${w})`;
   b.className = winner === 0 ? '' : lost ? 'lose' : 'win';
   $('score').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
-  if (lost) $('card').hidden = false; // slides down over the board
-  else if (winner) confetti();
+  if (winner) { // card slides down over the board
+    $('card').textContent = lost ? "ドンマイ('ω')" : 'Amazing!!';
+    $('card').hidden = false;
+    if (!lost) confetti();
+  }
 }
 
-// canvas confetti: three bursts, then a second wave; skipped when the user prefers reduced motion
+// canvas confetti: three bursts, once; skipped when the user prefers reduced motion
 function confetti() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const cv = $('confetti'), ctx = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight;
@@ -174,8 +177,7 @@ function confetti() {
         vr: (Math.random() - 0.5) * 0.5, c: colors[Math.random() * colors.length | 0], round: Math.random() < 0.3 });
     }
   };
-  const wave = () => { burst(0, H, 260, -Math.PI / 3); burst(W, H, 260, -2 * Math.PI / 3); burst(W / 2, H * 0.45, 260, -Math.PI / 2); };
-  wave(); setTimeout(wave, 700);
+  burst(0, H, 260, -Math.PI / 3); burst(W, H, 260, -2 * Math.PI / 3); burst(W / 2, H * 0.45, 260, -Math.PI / 2);
   const t0 = performance.now(), dur = 5500;
   (function frame(t) {
     ctx.clearRect(0, 0, W, H);
